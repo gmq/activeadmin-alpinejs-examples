@@ -1,53 +1,47 @@
 <div class="p-6">
   <h1 class="font-bold mb-4">Acordeón</h1>
-  <div class="max-w-md">
-    <div x-data="{ open: false }">
-      <h3>
-        <button
-          class="w-full rounded-t bg-white border border-b-0 py-2 text-lg flex px-4"
-          x-on:click="open = !open"
-        >
-          Título #1
-          <%= image_tag('chevron-down.svg', class: 'ml-auto', 'x-bind:class': "{'rotate-180': open}" ) %>
-        </button>
-      </h3>
-      <div class="px-4 py-2 border bg-gray-200" x-show="open">
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-      </div>
+  <div class="max-w-md" x-data="{ open: null }">
+    <h3>
+      <button
+        class="w-full rounded-t bg-white border border-b-0 py-2 text-lg flex px-4"
+        x-on:click="open = open === 0 ? null : 0"
+      >
+        Título #1
+        <%= image_tag('chevron-down.svg', class: 'ml-auto', 'x-bind:class': "{'rotate-180': open === 0}" ) %>
+      </button>
+    </h3>
+    <div class="px-4 py-2 border bg-gray-200" x-show="open === 0">
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
     </div>
-    <div x-data="{ open: false }">
-      <h3>
-        <button
-          class="w-full bg-white border border-b-0 px-4 py-2 text-lg flex"
-          x-on:click="open = !open"
-        >
-          Título #2
-          <%= image_tag('chevron-down.svg', class: 'ml-auto', 'x-bind:class': "{'rotate-180': open}" ) %>
-        </button>
-      </h3>
-      <div class="px-4 py-2 border bg-gray-200" x-show="open">
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-      </div>
+    <h3>
+      <button
+        class="w-full bg-white border border-b-0 px-4 py-2 text-lg flex"
+        x-on:click="open = open === 1 ? null : 1"
+      >
+        Título #2
+        <%= image_tag('chevron-down.svg', class: 'ml-auto', 'x-bind:class': "{'rotate-180': open === 1}" ) %>
+      </button>
+    </h3>
+    <div class="px-4 py-2 border bg-gray-200" x-show="open === 1">
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
     </div>
-    <div x-data="{ open: false }">
-      <h3>
-        <button
-          class="w-full bg-white border px-4 py-2 text-lg flex"
-          x-on:click="open = !open"
-        >
-          Título #3
-          <%= image_tag('chevron-down.svg', class: 'ml-auto', 'x-bind:class': "{'rotate-180': open}" ) %>
-        </button>
-      </h3>
-      <div class="px-4 py-2 border bg-gray-200 rounded-b" x-show="open">
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-        <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
-      </div>
+    <h3>
+      <button
+        class="w-full bg-white border px-4 py-2 text-lg flex"
+        x-on:click="open = open === 2 ? null : 2"
+      >
+        Título #3
+        <%= image_tag('chevron-down.svg', class: 'ml-auto', 'x-bind:class': "{'rotate-180': open === 2}" ) %>
+      </button>
+    </h3>
+    <div class="px-4 py-2 border bg-gray-200 rounded-b" x-show="open === 2">
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
+      <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit.</p>
     </div>
   </div>
 </div>
