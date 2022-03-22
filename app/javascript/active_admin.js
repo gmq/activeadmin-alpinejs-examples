@@ -1,16 +1,15 @@
-// Load Active Admin's styles into Webpacker,
-// see `active_admin.scss` for customization.
-import "./stylesheets/active_admin.scss";
-
-import "@activeadmin/activeadmin";
-
+import '@activeadmin/activeadmin';
 import '@fortawesome/fontawesome-free/css/all.css';
 import 'arctic_admin';
-import "activeadmin_addons"
+import 'activeadmin_addons';
 import { createApp } from 'vue';
+import Alpine from 'alpinejs';
+import './stylesheets/active_admin.scss';
 import AdminComponent from './components/admin-component.vue';
 
 function onLoad() {
+  window.Alpine = Alpine;
+  Alpine.start();
   if (document.getElementById('wrapper') !== null) {
     const app = createApp({
       mounted() {
@@ -29,5 +28,4 @@ function onLoad() {
 }
 
 document.addEventListener('DOMContentLoaded', onLoad, { once: true });
-
 
