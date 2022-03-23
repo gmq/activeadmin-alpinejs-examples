@@ -5,9 +5,18 @@ import 'activeadmin_addons';
 import { createApp } from 'vue';
 import Alpine from 'alpinejs';
 import { select2 } from 'active-admin-alpinejs-fixes';
+import { rutFormat } from 'rut-helpers';
 
 import './stylesheets/active_admin.scss';
 import AdminComponent from './components/admin-component.vue';
+
+window.formatters = {
+  currency: new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }),
+  numberCleaner(value) {
+    return value.replaceAll(/\D/g, '');
+  },
+  rutFormat,
+};
 
 function onLoad() {
   /* Alpine Examples */
