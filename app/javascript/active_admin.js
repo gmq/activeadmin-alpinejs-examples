@@ -10,6 +10,8 @@ import { rutFormat, rutValidate } from 'rut-helpers';
 import './stylesheets/active_admin.scss';
 import AdminComponent from './components/admin-component.vue';
 
+import complexExample from './activeadmin/complex_example';
+
 window.formatters = {
   currency: new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }),
   numberCleaner(value) {
@@ -26,6 +28,8 @@ function onLoad() {
   /* Alpine Examples */
   window.Alpine = Alpine;
   window.alpineFixes = { select2 };
+
+  Alpine.data('complexExample', complexExample);
   Alpine.start();
 
   /* Default Potassium Vue stuff */
