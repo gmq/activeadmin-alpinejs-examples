@@ -5,7 +5,7 @@ import 'activeadmin_addons';
 import { createApp } from 'vue';
 import Alpine from 'alpinejs';
 import { select2 } from 'active-admin-alpinejs-fixes';
-import { rutFormat } from 'rut-helpers';
+import { rutFormat, rutValidate } from 'rut-helpers';
 
 import './stylesheets/active_admin.scss';
 import AdminComponent from './components/admin-component.vue';
@@ -16,6 +16,10 @@ window.formatters = {
     return value.replaceAll(/\D/g, '');
   },
   rutFormat,
+};
+
+window.validators = {
+  rut: rutValidate,
 };
 
 function onLoad() {

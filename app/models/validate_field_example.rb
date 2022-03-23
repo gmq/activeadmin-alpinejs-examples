@@ -1,14 +1,12 @@
-class FormatFieldExample < ApplicationRecord
-  attr_accessor :active_admin_amount
+class ValidateFieldExample < ApplicationRecord
 end
 
 # == Schema Information
 #
-# Table name: format_field_examples
+# Table name: validate_field_examples
 #
 #  id         :bigint(8)        not null, primary key
 #  rut        :string
-#  amount     :integer
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #
