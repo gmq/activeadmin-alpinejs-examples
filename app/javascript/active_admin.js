@@ -4,12 +4,18 @@ import 'arctic_admin';
 import 'activeadmin_addons';
 import { createApp } from 'vue';
 import Alpine from 'alpinejs';
+import { select2 } from 'active-admin-alpinejs-fixes';
+
 import './stylesheets/active_admin.scss';
 import AdminComponent from './components/admin-component.vue';
 
 function onLoad() {
+  /* Alpine Examples */
   window.Alpine = Alpine;
+  window.alpineFixes = { select2 };
   Alpine.start();
+
+  /* Default Potassium Vue stuff */
   if (document.getElementById('wrapper') !== null) {
     const app = createApp({
       mounted() {

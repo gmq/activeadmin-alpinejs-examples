@@ -1918,6 +1918,11 @@ acorn@^8.2.4, acorn@^8.4.1, acorn@^8.5.0, acorn@^8.7.0:
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-8.7.0.tgz#90951fde0f8f09df93549481e5fc141445b791cf"
   integrity sha512-V/LGr1APy+PXIwKebEWrkZPwoeoF+w1jiOBUmuxuiUIaOHtob8Qc9BTrYo7VuI5fR8tqsy+buA2WFooR5olqvQ==
 
+active-admin-alpinejs-fixes@^0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/active-admin-alpinejs-fixes/-/active-admin-alpinejs-fixes-0.0.3.tgz#42e0e02f15abd7807a41a6b256d416bbb27062ab"
+  integrity sha512-OmFD+5VjEcr+RtdtNrSWxd1Xg6/arCTVtTZLpSc3XMR+HuoCj3BxQZgyFhXE/pPBf4LkGoqm/A0ryf9toxVHQQ==
+
 activeadmin_addons@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/activeadmin_addons/-/activeadmin_addons-1.0.0.tgz#e271913d7d4e971398ac102202f5038be08439b0"

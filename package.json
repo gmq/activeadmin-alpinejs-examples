@@ -12,6 +12,7 @@
     "@types/tailwindcss": "^3.0.9",
     "@vue/test-utils": "^2.0.0-rc.18",
     "@vue/vue3-jest": "^27.0.0-alpha.1",
+    "active-admin-alpinejs-fixes": "^0.0.3",
     "activeadmin_addons": "^1.0.0",
     "alpinejs": "^3.9.1",
     "arctic_admin": "^4.0.2",
