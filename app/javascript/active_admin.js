@@ -4,7 +4,7 @@ import 'arctic_admin';
 import 'activeadmin_addons';
 import { createApp } from 'vue';
 import Alpine from 'alpinejs';
-import { select2 } from 'active-admin-alpinejs-fixes';
+import { select2, hasMany } from 'active-admin-alpinejs-fixes';
 import { rutFormat, rutValidate } from 'rut-helpers';
 
 import './stylesheets/active_admin.scss';
@@ -27,7 +27,7 @@ window.validators = {
 function onLoad() {
   /* Alpine Examples */
   window.Alpine = Alpine;
-  window.alpineFixes = { select2 };
+  window.alpineFixes = { select2, hasMany };
 
   Alpine.data('complexExample', complexExample);
   Alpine.start();
