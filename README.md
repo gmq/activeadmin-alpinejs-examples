@@ -1,167 +1,380 @@
-# Alpine Rails 
-This is a Rails application, initially generated using [Potassium](https://github.com/platanus/potassium) by Platanus.
+# ActiveAdmin + AlpineJS
 
-## Local installation
+If you're tired of dealing with jQuery's messy file structure, AlpineJS proves itself to be a worthy alternative. In most cases there's no need for an external JS file, so all the necessary code for a function to work can be declared directly into your resource's ActiveAdmin file.
+
+  - [Installing AlpineJS](#installing-alpinejs)
+  - [Basics](#basics)
+  - [Format a field when writing](#format-a-field-when-writing)
+  - [Validate a Field](#validate-a-field)
+  - [Toggle a Field's Visibility](#toggle-a-fields-visibility)
+  - [Select2 Fields](#select2-fields)
+  - [Has Many](#has-many)
+  - [Complex Forms](#complex-forms)
+  - [Running this repo](#running-this-repo)
+
+## Installing AlpineJS
+
+```bash
+# When using Shakapacker, Webpack 5+ or other modern bundlers
+yarn add alpine
+
+# When using Webpacker
+yarn add alpine@2
+```
+
+Then we need to add the following to a javascript file that runs when ActiveAdmin is active, usually the one with `import '@activeadmin/activeadmin';`
+
+```javascript
+import '@activeadmin/activeadmin';
+
+import Alpine from 'alpinejs';
+
+window.Alpine = Alpine;
+Alpine.start();
+
+```
+
+if you're using Alpine 2 (due to Webpacker), you need to use the following instead:
+
+```javascript
+import '@activeadmin/activeadmin';
+
+import 'alpinejs'
+```
+
+> :grey_exclamation: All examples in this repository use AlpineJS 3 but they should work as-is in AlpineJS 2.
+
+## Basics
+
+An AlpineJS component is an html element with an `x-data` attribute with all the variables we'll use.
+
+```html
+<div x-data="{open: false}"></div>
+```
+
+To make that work in ActiveAdmin, we need to add the `x-data` attribute either to `inputs` or `input`.
+
+```ruby
+f.inputs 'x-data':  CGI.escapeHTML("{...#{f.resource.attributes.to_json}}") do
+  f.input :name
+end
+```
+
+> :grey_exclamation: `CGI.escapeHTML` is necessary to avoid breaking printing something that'll escape the `x-data` attribute (usually because of a double quote)
+
+> :grey_exclamation: `f.resource.attributes` gives us access to all the attributes the model has. Instead of using it you can declare values by hand, always remembering it needs to be a valid javascript object.
+
+> :exclamation: Most examples assume the `x-data` attribute has been declared.
+
+Once we have initialized the component with `x-data` we can start using AlpineJS's directives.
+
+```ruby
+f.inputs 'x-data':  CGI.escapeHTML("{...#{f.resource.attributes.to_json}}") do
+  f.input :name, input_html: { 'x-model': 'name' }
+end
+```
+
+## Format a field when writing
+
+When to use: Telephone numbers, currency values, national id numbers.
+
+To start, we need to add the formatter function to the same file where we initialized Alpine and expose it to the browser page.
+
+```javascript
+window.Alpine = Alpine;
+Alpine.start();
+
+window.formatters = {
+  // Formats a number to currency
+  currency: new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }),
+  // Removes everything that's not a number from a string
+  numberCleaner(value) {
+    return value.replaceAll(/\D/g, '');
+  },
+};
+```
+
+Then, inside our admin file we use `x-on:input` (or `@input`) to format the value every time we input a number into our input.
+
+> :grey_exclamation: For this specific example we need to clean the number (so that it's actually a number (`1000`) instead of a string (`1.000`), so we run `numberCleaner` before `format`.
+
+```ruby
+f.input :amount, input_html: {
+  'x-model': 'amount',
+  'x-on:input': 'amount = formatters.currency.format(formatters.numberCleaner($event.target.value));'
+}
+```
+
+If we reload the page, the amount will not be formatted since the formatter only runs on input. For that we need to edit the initial data in `x-data`.
+
+```ruby
+
+f.inputs 'x-data': CGI.escapeHTML("{ amount: '#{number_to_currency(f.resource.attributes['amount'])}'}") do
+
+  f.input :amount, input_html:
+    'x-model': 'amount',
+    'x-on:input': 'amount = formatters.currency.format(formatters.numberCleaner($event.target.value));
+    '
+```
+
+In the case the model's attribute is an `integer` in the database, we can't save the formatted string. For that, we need to add a couple of things to have to inputs, the formatted one and the "real" one that is saved to the database.
+
+In the model add:
+
+```ruby
+class FormatFieldExample < ApplicationRecord
+  attr_accessor :active_admin_amount
+end
+```
+
+> :grey_exclamation: `attr_accessor` is necessary since ActiveAdmin doesn't allow values that don't exist to be shown as inputs.
+
+Then in our admin file we use `amount` directly and then add a formatted `active_admin_amount` to `x-data`.
+
+```ruby
+f.inputs 'x-data': CGI.escapeHTML("{
+    amount: #{f.resource.attributes['amount']},
+    active_admin_amount: '#{number_to_currency(f.resource.attributes['amount'])}',
+  }") do
+
+```
+
+For the visible amount, we replace it with `active_admin_amount` and update the `x-on:input` method so it also updates the `amount` in `x-data`.
+
+```ruby
+  f.input :active_admin_amount, input_html:
+    'x-model': 'active_admin_amount',
+    'x-on:input': '
+      active_admin_amount = formatters.currency.format(formatters.numberCleaner($event.target.value));
+      amount = formatters.numberCleaner(active_admin_amount);
+    '
+```
+
+Finally, we add a hidden input with the real `amount` so it gets saved in the database as a number.
+
+```ruby
+f.input :amount, as: :hidden, input_html: {
+  'x-bind:value': 'amount'
+}
+```
+
+[source code](app/admin/format_field_examples.rb)
+
+## Validate a Field
+
+When to use: To prevent the form being able to be saved if a value is not valid, to display when a value needs to be filled or it has an invalid value.
+
+As in the previous example, we need to add our validation function to the window variable so it's available in the ActiveAdmin page.
+
+```javascript
+import { rutValidate } from 'rut-helpers';
+
+window.validators = {
+  // Formats a value to the standard RUT format.
+  rut: rutValidate
+};
+```
+
+In this example we want to change the input's class if the value is not valid, for that we need to use `x-bind:class` (or `:class`) so the class `error` gets dynamically added when `validators.rut(rut)` is `false`:
+
+```ruby
+f.input :rut, input_html: {
+  'x-model': 'rut',
+  'x-bind:class': '{error: !validators.rut(rut)}'
+}
+```
+
+If we also want to disable the submit button, we can edit the `submit` action to add the disabled attribute. `x-bind:disabled` (or `:disabled`) dynamically adds the attribute when the validator is false.
+
+```ruby
+f.actions do
+  f.action :submit, button_html: { 'x-bind:disabled': "!validators.rut(rut)" }
+end
+```
+
+[source code](app/admin/validate_field_examples.rb)
+
+## Toggle a Field's Visibility
+
+Being able to show or hide a field can be done using Alpine's `x-show` directive.
+
+First we need a field with `x-model` so we can check its value afterwards
+
+```ruby
+f.input :has_description, input_html: {
+  'x-model': 'has_description'
+}
+```
+
+And then we add the `x-show ` directive to the field we want to show or hide depending on the value of the `has_description` field.
+
+```ruby
+f.input :description, wrapper_html: {
+  'x-show': 'has_description'
+}
+```
+
+> :exclamation: We need to use `wrapper_html` instead of `input_html` to hide both the label and the input field.
+
+[source code](app/admin/toggle_field_examples.rb)
+
+## Select2 Fields
+
+[ActiveAdmin Addons](https://github.com/platanus/activeadmin_addons) transforms all select controls to use Select2, to make it easier to add large collections or tags. However, AlpineJS doesn't know what to do with Select2 elements (and the other way around).
+
+To make them work we need to install [active-admin-alpine-fixes](https://www.npmjs.com/package/active-admin-alpinejs-fixes).
+
+```bash
+yarn add active-admin-alpine-fixes
+```
+
+Then, we have to make the fix available to the DOM.
+
+```javascript
+import { select2 } from 'active-admin-alpine-fixes';
+
+window.alpineFixes = { select2 };
+```
+
+Finally, we add the fix to our AlpineJS component by adding the `x-init` attribute so that it can run the fix as soon as the component runs.
+
+```ruby
+f.inputs 'x-init': 'alpineFixes.select2.init', 'x-data':  CGI.escapeHTML("{...#{f.resource.attributes.to_json}}") do
+  f.input :choices
+end
+```
+
+[source code](app/admin/select2_examples.rb)
+
+## Has Many
+
+ActiveAdmin allows us to add a nested form when a resource has a `has_many`. When you click "new resource" inside this nested form, ActiveAdmin uses jQuery to create the new fields and AlpineJS gets confused.
+
+To make them work we need to install [active-admin-alpine-fixes](https://www.npmjs.com/package/active-admin-alpinejs-fixes).
+
+```bash
+yarn add active-admin-alpine-fixes
+```
+
+Then, we have to make the fix available to the DOM.
+
+```javascript
+import { hasMany } from 'active-admin-alpine-fixes';
+
+window.alpineFixes = { hasMany };
+```
+
+In our component we need to add the fix to the `x-init` directive, and in our `x-data` we need to explicitly add the nested resource. Inside `has_many`, we need to declare the `x-model` using the available index number so that AlpineJS knows what field corresponds to what element in the children array.
+
+```ruby
+f.inputs 'x-init': 'alpineFixes.hasMany.init',
+          'x-data': CGI.escapeHTML("{
+            ...#{f.resource.attributes.to_json},
+            children: #{f.resource.children.to_json}
+          }") do
+  f.has_many :children, allow_destroy: true do |co, i|
+    # has_many index starts with 1 while javascript's starts with 0 so we subtract one
+    co.input :name, input_html: {
+      'x-model': "children[#{i - 1}].name"
+    }
+  end
+end
+```
+
+[source code](app/admin/has_many_examples.rb)
+
+
+## Complex Forms
+
+If our form is really complex _or_ it has functionality that can very easily be reused, we can use `Alpine.data` in our javascript to declare an object that can be used in our form without having to expose variables with `window`. In other words, we can have a different JS file with everything we need and then we can import it and use it in our main JS file.
+
+```javascript
+// activeadmin/complex_example.js
+
+export default (attributes = {}) => {
+  function init() {
+    // We need to pass the Alpine context (this) so it can find the element
+    select2.init.bind(this)();
+  }
+
+  const currencyFormat = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
+
+  function numberCleaner(value) {
+    return value.replaceAll(/\D/g, '');
+  }
+
+
+  // We return an object that will be available inside our component
+  return { ...attributes, init, currencyFormat, numberCleaner };
+};
+
+```
+
+```javascript
+import complexExample from './activeadmin/complex_example';
+
+Alpine.data('complexExample', complexExample);
+Alpine.start();
+```
+
+Once we have done the above, we can use `complexExample` in our `x-data`, which receives the attributes we need to initialize the data.
+
+```ruby
+  form do |f|
+    f.inputs 'x-data': "complexExample(#{CGI.escapeHTML("{
+        ...#{f.resource.attributes.to_json},
+        active_admin_amount: '#{number_to_currency(f.resource.attributes['amount'])}'
+      }")})" do
+      f.input :name
+
+      f.input :rut, input_html: {
+        'x-model': 'rut',
+        # We can use rutFormat directly since it's available inside the data object returned by the complexExample function.
+        'x-on:input': 'rut = rutFormat(rut)',
+        'x-bind:class': '{error: !rutValidate(rut)}'
+      }
+
+      f.input :active_admin_amount, input_html: {
+        'x-model': 'active_admin_amount',
+        'x-on:input': '
+          active_admin_amount = currencyFormat.format(numberCleaner($event.target.value));
+          amount = numberCleaner(active_admin_amount);
+        '
+      }
+      f.input :amount, as: :hidden, input_html: {
+        'x-bind:value': 'amount'
+      }
+
+      f.actions do
+        f.action :submit, button_html: { 'x-bind:disabled': "!rutValidate(rut)" }
+      end
+    end
+  end
+end
+
+```
+
+[source code](app/admin/complex_examples.rb)
+
+## Running this repo
 
 Assuming you've just cloned the repo, run this script to setup the project in your
 machine:
 
-    $ ./bin/setup
+```bash
+  ./bin/setup
+```
 
 It assumes you have a machine equipped with Ruby, Node.js, Docker and make.
 
 The script will do the following among other things:
 
-- Install the dependecies
+- Install the dependencies
 - Create a docker container for your database
 - Prepare your database
-- Adds heroku remotes
 
-After the app setup is done you can run it with [Heroku Local]
+After the app setup is done you can run it with
 
-    $ heroku local
-
-[Heroku Local]: https://devcenter.heroku.com/articles/heroku-local
-
-
-## Continuous Integrations
-
-The project is setup to run tests
-in [CircleCI](https://circleci.com/gh/platanus/alpine-rails/tree/master)
-
-You can also run the test locally simulating the production environment using [CircleCI's method](https://circleci.com/docs/2.0/local-cli/).
-
-
-## Style Guides
-
-Style guides are enforced through a CircleCI [job](.circleci/config.yml) with [reviewdog](https://github.com/reviewdog/reviewdog) as a reporter, using per-project dependencies and style configurations.
-Please note that this reviewdog implementation requires a GitHub user token to comment on pull requests. A token can be generated [here](https://github.com/settings/tokens), and it should have at least the `repo` option checked.
-The included `config.yml` assumes your CircleCI organization has a context named `org-global` with the required token under the environment variable `REVIEWDOG_GITHUB_API_TOKEN`.
-
-The project comes bundled with configuration files available in this repository.
-
-Linting dependencies like `rubocop` or `rubocop-rspec` must be locked in your `Gemfile`. Similarly, packages like `eslint` or `eslint-plugin-vue` must be locked in your `package.json`.
-
-You can add or modify rules by editing the [`.rubocop.yml`](.rubocop.yml), [`.eslintrc.json`](.eslintrc.json) or [`.stylelintrc.json`](.stylelintrc.json) files.
-
-You can (and should) use linter integrations for your text editor of choice, using the project's configuration.
-
-
-## Seeds
-
-To populate your database with initial data you can add, inside the `/db/seeds.rb` file, the code to generate **only the necessary data** to run the application.
-If you need to generate data with **development purposes**, you can customize the `lib/fake_data_loader.rb` module and then to run the `rake load_fake_data` task from your terminal.
-
-
-## Internal dependencies
-
-### Authorization
-
-For defining which parts of the system each user has access to, we have chosen to include the [Pundit](https://github.com/elabs/pundit) gem, by [Elabs](http://elabs.se/).
-
-### Authentication
-
-We are using the great [Devise](https://github.com/plataformatec/devise) library by [PlataformaTec](http://plataformatec.com.br/)
-
-### Administration
-
-This project uses [Active Admin](https://github.com/activeadmin/activeadmin) which is a Ruby on Rails framework for creating elegant backends for website administration.
-
-This project supports Vue inside ActiveAdmin
-- The main package is located in `app/javascript/active_admin.js`, here you will declare the components you want to include in your ActiveAdmin views as you would in a normal Vue App.
-- Additionally, to be able to use Vue components as [Arbre](https://github.com/activeadmin/arbre) Nodes the component names are also declared in `config/initializers/active_admin.rb`
-- The generator includes an example component called `admin_component`, you can use this component inside any ActiveAdmin view by just writing `admin_component` as you would with any `html` tag.
-  - For example:
-    ```
-    admin_component(class:"myCustomClass",id:"myCustomId") do
-      admin_component(id:"otherCustomId")
-    end
-    ```
-  - (Keep in mind that the example works with ruby blocks because `AdminComponent` has a `<slot>` tag defined, therefore children can be added to the component)
-- The integration supports passing props to the components and converts them to their corresponing javascript objects.
-  - For example, the following works
-  ```
-  admin_component(testList:[1,2,3,4],testObject:{"name":"Vue component"})
-  ```
-  - You can also use **any** vue bindings such as `v-for` , `:key` etc.
-
-
-It uses the [ActiveAdmin's Pundit adapter](https://activeadmin.info/13-authorization-adapter.html).
-- Policies for admin resources must inherit from `BackOffice::DefaultPolicy` and be placed inside the `app/policies/back_office` directory.
-  - For example:
-
-    `app/admin/clients.rb`:
-
-    ```ruby
-    ActiveAdmin.register Client do
-      # ...
-    end
-    ```
-
-    `app/policies/back_office/client_policy.rb`:
-
-    ```ruby
-    class BackOffice::ClientPolicy < BackOffice::DefaultPolicy
-    end
-    ```
-
-
-
-### File Storage
-
-For managing uploads, this project uses [Shrine](https://github.com/shrinerb/shrine).
-
-### Rails pattern enforcing types
-
-This project uses [Power-Types](https://github.com/platanus/power-types) to generate Services, Commands, Utils and Values.
-
-### Presentation Layer
-
-This project uses [Draper](https://github.com/drapergem/draper) to add an object-oriented layer of presentation logic
-
-### API Support
-
-This projects uses [Power API](https://github.com/platanus/power_api). It's a Rails engine that gathers a set of gems and configurations designed to build incredible REST APIs.
-
-### Error Reporting
-
-To report our errors we use [Sentry](https://github.com/getsentry/raven-ruby)
-
-## Testing
-
-We use:
-- [RSpec](https://github.com/rspec/rspec-rails): the testing framework.
-- [Shoulda Matchers](https://github.com/thoughtbot/shoulda-matchers): one-liners to test common Rails functionality that, if written by hand, would be much longer, more complex, and error-prone.
-- [Factory Bot](https://github.com/thoughtbot/factory_bot_rails): a fixtures replacement with a straightforward definition syntax, support for multiple build strategies (saved instances, unsaved instances, attribute hashes, and stubbed objects), and support for multiple factories for the same class (user, admin_user, and so on), including factory inheritance.
-- [Faker](https://github.com/faker-ruby/faker): a port of Perl's Data::Faker library that generates fake data.
-- [Guard](https://github.com/guard/guard): automates various tasks by running custom rules whenever file or directories are modified. We use it to run RSpec when files change.
-
-Place your unit tests inside the `spec` directory.
-
-To run unit tests: `bin/guard`
-
-#### System tests
-
-We use, in addition to the previous gems:
-- [Capybara](https://github.com/teamcapybara/capybara): helps you test web applications by simulating how a real user would interact with your app. It is agnostic about the driver running your tests and comes with Rack::Test and Selenium support built in. WebKit is supported through an external gem.
-- [Webdrivers](https://github.com/titusfortner/webdrivers): run Selenium tests more easily with automatic installation and updates for all supported webdrivers.
-
-Place your system tests inside the `spec/system` directory.
-
-To run system tests: `bin/rspec --tag type:system`
-
-
-## Development
-
-For hot-reloading and fast webpacker compilation you need to run webpack's dev server along with the rails server:
-
-    $ ./bin/webpacker-dev-server
-
-Running the dev server will also solve problems with the cache not refreshing between changes and provide better error messages if something fails to compile.
-
-For even faster in-place component refreshing (with no page reloads), you can enable Hot Module Reloading in `config/webpacker.yml`
-
-    development:
-      dev_server:
-        hmr: true
-
+```bash
+  bundle exec rails s
+```
