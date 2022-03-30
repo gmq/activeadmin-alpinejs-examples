@@ -4,7 +4,9 @@ ActiveAdmin.register FormatFieldExample do
   form do |f|
     f.inputs 'x-data': CGI.escapeHTML("{
         ...#{f.resource.attributes.to_json},
-        active_admin_amount: '#{number_to_currency(f.resource.attributes['amount'])}'
+        active_admin_amount: formatters.currency.format(
+          '#{f.resource.attributes['amount']}'
+        )
       }") do
       f.input :rut, input_html: {
         'x-model': 'rut',

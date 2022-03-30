@@ -109,7 +109,7 @@ If we reload the page, the amount will not be formatted since the formatter only
 
 ```ruby
 
-f.inputs 'x-data': CGI.escapeHTML("{ amount: '#{number_to_currency(f.resource.attributes['amount'])}'}") do
+f.inputs 'x-data': CGI.escapeHTML("{ amount: formatters.currency.format('#{f.resource.attributes['amount']}')}") do
 
   f.input :amount, input_html:
     'x-model': 'amount',
@@ -134,7 +134,7 @@ Then in our admin file we use `amount` directly and then add a formatted `active
 ```ruby
 f.inputs 'x-data': CGI.escapeHTML("{
     amount: #{f.resource.attributes['amount']},
-    active_admin_amount: '#{number_to_currency(f.resource.attributes['amount'])}',
+    active_admin_amount: formatters.currency.format('#{f.resource.attributes['amount']}')},
   }") do
 
 ```
@@ -222,7 +222,7 @@ f.input :description, wrapper_html: {
 
 [ActiveAdmin Addons](https://github.com/platanus/activeadmin_addons) transforms all select controls to use Select2, to make it easier to add large collections or tags. However, AlpineJS doesn't know what to do with Select2 elements (and the other way around).
 
-To make them work we need to install [active-admin-alpine-fixes](https://www.npmjs.com/package/active-admin-alpinejs-fixes).
+To make `select` elements with `x-model` attributes work we need to install [active-admin-alpine-fixes](https://www.npmjs.com/package/active-admin-alpinejs-fixes).
 
 ```bash
 yarn add active-admin-alpine-fixes
@@ -240,7 +240,7 @@ Finally, we add the fix to our AlpineJS component by adding the `x-init` attribu
 
 ```ruby
 f.inputs 'x-init': 'alpineFixes.select2.init', 'x-data':  CGI.escapeHTML("{...#{f.resource.attributes.to_json}}") do
-  f.input :choices
+  f.input :choices, input_html: { 'x-model': 'choices' }
 end
 ```
 
@@ -284,7 +284,7 @@ end
 [source code](app/admin/has_many_examples.rb)
 
 
-## Complex Forms
+## Complex Forms (AlpineJS 3 Only - Alpine.data)
 
 If our form is really complex _or_ it has functionality that can very easily be reused, we can use `Alpine.data` in our javascript to declare an object that can be used in our form without having to expose variables with `window`. In other words, we can have a different JS file with everything we need and then we can import it and use it in our main JS file.
 
@@ -292,8 +292,9 @@ If our form is really complex _or_ it has functionality that can very easily be 
 // activeadmin/complex_example.js
 
 export default (attributes = {}) => {
+  // We can replace the x-init directive with a function called 'init', it'll get automatically called when the component is mounted.
   function init() {
-    // We need to pass the Alpine context (this) so it can find the element
+    // We need to pass the Alpine context (this) so it can find the element.
     select2.init.bind(this)();
   }
 
@@ -320,34 +321,34 @@ Alpine.start();
 Once we have done the above, we can use `complexExample` in our `x-data`, which receives the attributes we need to initialize the data.
 
 ```ruby
-  form do |f|
-    f.inputs 'x-data': "complexExample(#{CGI.escapeHTML("{
-        ...#{f.resource.attributes.to_json},
-        active_admin_amount: '#{number_to_currency(f.resource.attributes['amount'])}'
-      }")})" do
-      f.input :name
+form do |f|
+  # Since since we haven't run complexExample, currencyFormat is not available yet so we can't use it
+  # in x-data. You can add the formatter to the window variable separately, process the attributes inside
+  # the complexExample, or, like in this case, use Ruby to get the same result.
+  f.inputs 'x-data': "complexExample(#{CGI.escapeHTML("{
+      ...#{f.resource.attributes.to_json},
+      active_admin_amount: '#{number_to_currency(f.resource.attributes['amount'])}'
+    }")})" do
+    f.input :name
 
-      f.input :rut, input_html: {
-        'x-model': 'rut',
-        # We can use rutFormat directly since it's available inside the data object returned by the complexExample function.
-        'x-on:input': 'rut = rutFormat(rut)',
-        'x-bind:class': '{error: !rutValidate(rut)}'
-      }
+    f.input :active_admin_amount, input_html: {
+      'x-model': 'active_admin_amount',
+      # We can use currencyFormat and numberCleaner directly since they are available inside
+      # the data object returned by the complexExample function.
+      'x-on:input': '
+        active_admin_amount = currencyFormat.format(numberCleaner($event.target.value));
+        amount = numberCleaner(active_admin_amount);
+      '
+    }
 
-      f.input :active_admin_amount, input_html: {
-        'x-model': 'active_admin_amount',
-        'x-on:input': '
-          active_admin_amount = currencyFormat.format(numberCleaner($event.target.value));
-          amount = numberCleaner(active_admin_amount);
-        '
-      }
-      f.input :amount, as: :hidden, input_html: {
-        'x-bind:value': 'amount'
-      }
+    f.input :choices, input_html: { 'x-model': 'choices' }
 
-      f.actions do
-        f.action :submit, button_html: { 'x-bind:disabled': "!rutValidate(rut)" }
-      end
+    f.input :amount, as: :hidden, input_html: {
+      'x-bind:value': 'amount'
+    }
+
+    f.actions do
+      f.action :submit, button_html: { 'x-bind:disabled': "!rutValidate(rut)" }
     end
   end
 end
